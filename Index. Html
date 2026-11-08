@@ -1,0 +1,32 @@
+flutter create my_app
+cd my_app
+dependencies:
+  flutter_local_notifications: ^17.0.0
+  timezone: ^0.9.0
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+final notifications = FlutterLocalNotificationsPlugin();
+
+Future<void> setup() async {
+  // Android + iOS setup
+  const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const ios = DarwinInitializationSettings();
+  await notifications.initialize(
+    const InitializationSettings(android: android, iOS: ios),
+  );
+
+  // Ask user to allow notifications
+  await notifications.resolvePlatformSpecificImplementation<
+    AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
+}
+
+Future<void> sendNow() async {
+  await notifications.show(
+    0,
+    'Hello!',
+    'This is your first notification from your app',
+    const NotificationDetails(
+      android: AndroidNotificationDetails('main_channel', 'Main'),
+    ),
+  );
+}
