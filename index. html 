@@ -1,0 +1,6 @@
+GK-67/
+├── lib/main.dart  ← All your app code
+├── pubspec.yaml  ← Dependencies already fixed
+├── README.md  ← How to run instructions
+├── .gitignore
+└── android/app/src/main/AndroidManifest.xml  ← Notification permissions ALREADY added
