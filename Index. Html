@@ -1,59 +1,236 @@
-<!DOCTYPE html>
-<html lang="en">
-<head><style>
-@font-face {
-  font-family: "Optimistic";
-  font-style: normal;
-  font-weight: 400 600;
-  font-display: swap;
-  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Optimistic Mono";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
-}
-:where(html) {
-  font-family: "Optimistic", system-ui, sans-serif;
-}
-:where(code, pre, kbd, samp) {
-  font-family: "Optimistic Mono", ui-monospace, monospace;
-}
-</style>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>React Artifact</title>
-  <style>* {
-  box-sizing: border-box;
-  border-width: 0;
-  border-style: solid;
-  border-color: #e5e7eb;
-}
-body {
-  margin: 0;
-}
-h1, h2, h3, h4, h5, h6 {
-  font-size: inherit;
-  font-weight: inherit;
-}
-a {
-  color: inherit;
-  text-decoration: inherit;
-}
-button, input, optgroup, select, textarea {
-  font-family: inherit;
-  font-size: 100%;
-  margin: 0;
-  padding: 0;
-}
-img, video {
-  max-width: 100%;
-  height: auto;
-}</style>
-</head>
-<body>
+<Doctype:Html>
+import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
-</body>
-</html>
+// ================= NOTIFICATION SERVICE =================
+final FlutterLocalNotificationsPlugin notificationsPlugin = FlutterLocalNotificationsPlugin();
+
+Future<void> initNotifications() async {
+  tz.initializeTimeZones();
+  const AndroidInitializationSettings androidSettings =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const DarwinInitializationSettings iosSettings =
+      DarwinInitializationSettings(requestAlertPermission: true, requestBadgePermission: true, requestSoundPermission: true);
+  const InitializationSettings settings =
+      InitializationSettings(android: androidSettings, iOS: iosSettings);
+  await notificationsPlugin.initialize(settings);
+
+  await notificationsPlugin
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.requestNotificationsPermission();
+  await notificationsPlugin
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(const AndroidNotificationChannel(
+        'bookings_channel', 'Bookings',
+        description: 'Booking confirmations', importance: Importance.max,
+      ));
+}
+
+Future<void> sendBookingNotification(String serviceName, String ref) async {
+  const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    'bookings_channel', 'Bookings',
+    channelDescription: 'Booking confirmations',
+    importance: Importance.max, priority: Priority.high,
+  );
+  const NotificationDetails details = NotificationDetails(android: androidDetails);
+  await notificationsPlugin.show(
+    DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    'Booking Received!',
+    "Your $serviceName booking ($ref) is confirmed. We'll contact you soon.",
+    details,
+  );
+}
+
+// ================= MODEL =================
+class Service {
+  final String name;
+  final String desc;
+  final String price;
+  final IconData icon;
+  final Color color;
+  final List<String> includes;
+  Service({required this.name, required this.desc, required this.price, required this.icon, required this.color, required this.includes});
+}
+
+final List<Service> services = [
+  Service(name: 'Photo shoot', desc: 'Portraits, events & graduations', price: 'From K150', icon: Icons.camera_alt, color: Colors.orange, includes: ['1 hour shoot', '20 edited photos', 'Online gallery']),
+  Service(name: 'Video editing', desc: 'Reels, YouTube & wedding edits', price: 'From K100', icon: Icons.videocam, color: Colors.red, includes: ['Colour grading', 'Music + captions', 'Up to 5 mins']),
+  Service(name: 'Music Writing', desc: 'Lyrics, hooks & full songs', price: 'From K200', icon: Icons.music_note, color: Colors.purple, includes: ['Lyrics + melody idea', 'Hook / Chorus', '2 revisions']),
+  Service(name: 'Electrical', desc: 'Wiring, repairs & installations', price: 'From K120', icon: Icons.electrical_services, color: Colors.amber, includes: ['Safety check', 'Wiring & sockets', 'Fault finding']),
+  Service(name: 'Plastering', desc: 'Smooth walls & finishing', price: 'From K250', icon: Icons.format_paint, color: Colors.blue, includes: ['Wall prep', 'Smooth plaster', 'Clean finish']),
+  Service(name: 'Ceiling', desc: 'PVC & gypsum ceilings', price: 'From K400', icon: Icons.home, color: Colors.teal, includes: ['Measurement', 'PVC / Gypsum install', 'Lights fitting']),
+  Service(name: 'Other', desc: 'Tell us what you need', price: 'Custom quote', icon: Icons.add_circle, color: Colors.grey, includes: ['Describe your need', 'We will quote you', 'Flexible service']),
+];
+
+class Booking {
+  final String service;
+  final String ref;
+  final String name;
+  final String date;
+  Booking({required this.service, required this.ref, required this.name, required this.date});
+}
+
+// ================= APP =================
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initNotifications();
+  runApp(const GoldenApp());
+}
+
+class GoldenApp extends StatelessWidget {
+  const GoldenApp({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Golden Services',
+      theme: ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFFF6B00))),
+      home: const HomeScreen(),
+    );
+  }
+}
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  List<Booking> bookings = [];
+  List<String> notifications = [];
+
+  void openService(Service s) async {
+    final result = await showModalBottomSheet<Map<String,String>>(
+      context: context, isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => BookingSheet(service: s),
+    );
+    if (result != null) {
+      final ref = 'GS-${DateTime.now().millisecondsSinceEpoch % 10000}';
+      setState(() {
+        bookings.insert(0, Booking(service: s.name, ref: ref, name: result['name'] ?? '', date: result['date'] ?? ''));
+        notifications.insert(0, 'Booking Received! $ref - ${s.name}');
+      });
+      await sendBookingNotification(s.name, ref);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Booked! Ref: $ref - Notification sent')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F7F7),
+      appBar: AppBar(
+        title: const Text('Golden Services', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          Stack(children: [
+            IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () {
+              showDialog(context: context, builder: (_) => AlertDialog(
+                title: const Text('Notifications'),
+                content: notifications.isEmpty ? const Text('No notifications yet') : Column(mainAxisSize: MainAxisSize.min, children: notifications.map((n) => ListTile(leading: const Icon(Icons.check_circle, color: Colors.green), title: Text(n))).toList()),
+                actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+              ));
+            }),
+            if (notifications.isNotEmpty) Positioned(right: 8, top: 8, child: CircleAvatar(radius: 9, backgroundColor: Colors.red, child: Text('${notifications.length}', style: const TextStyle(color: Colors.white, fontSize: 10)))),
+          ]),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Hello 👋', style: TextStyle(fontSize: 16, color: Colors.grey)),
+          const Text('What can we offer you?', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          const Text('Tap a service to book it', style: TextStyle(color: Colors.grey)),
+          const SizedBox(height: 16),
+          TextField(decoration: InputDecoration(hintText: 'Search services...', prefixIcon: const Icon(Icons.search), filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none))),
+          const SizedBox(height: 20),
+          const Text('What can we offer you?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          GridView.builder(
+            shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.95),
+            itemCount: services.length,
+            itemBuilder: (ctx, i) {
+              final s = services[i];
+              return InkWell(onTap: () => openService(s), child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  CircleAvatar(backgroundColor: s.color.withOpacity(0.15), child: Icon(s.icon, color: s.color)),
+                  const SizedBox(height: 10),
+                  Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(s.desc, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  const Spacer(),
+                  Text(s.price, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF6B00))),
+                ]),
+              ));
+            },
+          ),
+          const SizedBox(height: 20),
+          const Text('My Bookings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          if (bookings.isEmpty) const Text('No bookings yet. Tap a service above.'),
+          ...bookings.map((b) => Card(child: ListTile(leading: const Icon(Icons.check_circle, color: Colors.green), title: Text('${b.service} - ${b.ref}'), subtitle: Text('${b.name} • ${b.date}'), trailing: const Chip(label: Text('Pending'))))),
+        ]),
+      ),
+      bottomNavigationBar: BottomNavigationBar(currentIndex: 0, selectedItemColor: const Color(0xFFFF6B00), items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+        BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Bookings'),
+        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+      ]),
+    );
+  }
+}
+
+// ================= BOOKING SHEET =================
+class BookingSheet extends StatefulWidget {
+  final Service service;
+  const BookingSheet({super.key, required this.service});
+  @override
+  State<BookingSheet> createState() => _BookingSheetState();
+}
+
+class _BookingSheetState extends State<BookingSheet> {
+  final nameC = TextEditingController();
+  final phoneC = TextEditingController();
+  final locationC = TextEditingController();
+  final dateC = TextEditingController();
+  final detailsC = TextEditingController();
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
+      child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Center(child: Container(width: 40, height: 5, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)))),
+        const SizedBox(height: 16),
+        Row(children: [CircleAvatar(backgroundColor: widget.service.color.withOpacity(0.15), child: Icon(widget.service.icon, color: widget.service.color)), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(widget.service.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)), Text(widget.service.price, style: const TextStyle(color: Color(0xFFFF6B00), fontWeight: FontWeight.bold))]))]),
+        const SizedBox(height: 8),
+        Text(widget.service.desc),
+        const SizedBox(height: 8),
+        ...widget.service.includes.map((e) => Row(children: [const Icon(Icons.check, size: 16, color: Colors.green), const SizedBox(width: 6), Text(e)])),
+        const SizedBox(height: 16),
+        TextField(controller: nameC, decoration: const InputDecoration(labelText: 'Your Name', border: OutlineInputBorder())),
+        const SizedBox(height: 10),
+        TextField(controller: phoneC, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone Number', border: OutlineInputBorder())),
+        const SizedBox(height: 10),
+        TextField(controller: locationC, decoration: const InputDecoration(labelText: 'Location', border: OutlineInputBorder())),
+        const SizedBox(height: 10),
+        TextField(controller: dateC, decoration: const InputDecoration(labelText: 'Date (e.g. 12 Nov)', border: OutlineInputBorder())),
+        const SizedBox(height: 10),
+        TextField(controller: detailsC, maxLines: 3, decoration: const InputDecoration(labelText: 'Details', border: OutlineInputBorder())),
+        const SizedBox(height: 16),
+        SizedBox(width: double.infinity, child: ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF6B00), foregroundColor: Colors.white, padding: const EdgeInsets.all(16)),
+          onPressed: () => Navigator.pop(context, {'name': nameC.text, 'date': dateC.text}),
+          child: const Text('Request Service', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        )),
+        const SizedBox(height: 20),
+      ])),
+    );
+  }
+}
